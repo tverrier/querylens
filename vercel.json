@@ -1,0 +1,14 @@
+{
+  "framework": "nextjs",
+  "buildCommand": "next build",
+  "installCommand": "npm install",
+  "env": {
+    "NEXT_PUBLIC_SUPABASE_URL": "@next_public_supabase_url",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "@next_public_supabase_anon_key",
+    "SUPABASE_SERVICE_ROLE_KEY": "@supabase_service_role_key",
+    "INNGEST_EVENT_KEY": "@inngest_event_key",
+    "INNGEST_SIGNING_KEY": "@inngest_signing_key",
+    "OPENAI_API_KEY": "@openai_api_key",
+    "NEXT_PUBLIC_SITE_URL": "@next_public_site_url"
+  }
+}
