@@ -23,7 +23,19 @@ async function runExplain(rawSql: string): Promise<unknown> {
 }
 
 export const analyzeQuery = inngest.createFunction(
-  { id: "analyze-query", retries: 2 },
+  {
+    id: "analyze-query",
+    retries: 2,
+    onFailure: async ({ event, error }) => {
+      const { analysisId } = (event.data.event.data ?? {}) as { analysisId?: string };
+      if (!analysisId) return;
+      const supabase = createServiceClient();
+      await supabase
+        .from("query_analyses")
+        .update({ status: "failed", error: error.message })
+        .eq("id", analysisId);
+    },
+  },
   { event: "query/analyze.requested" },
   async ({ event, step }) => {
     const { analysisId, rawSql } = event.data;
