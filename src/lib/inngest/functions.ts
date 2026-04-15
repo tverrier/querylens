@@ -1,6 +1,26 @@
 import { inngest } from "./client";
 import { createServiceClient } from "@/lib/supabase/server";
 import OpenAI from "openai";
+import { Client } from "pg";
+
+async function runExplain(rawSql: string): Promise<unknown> {
+  const url = process.env.TARGET_DATABASE_URL;
+  if (!url) {
+    return {
+      stubbed: true,
+      note: "Set TARGET_DATABASE_URL to run EXPLAIN against a real Postgres.",
+      sql: rawSql,
+    };
+  }
+  const client = new Client({ connectionString: url });
+  await client.connect();
+  try {
+    const res = await client.query(`EXPLAIN (FORMAT JSON) ${rawSql}`);
+    return res.rows[0]?.["QUERY PLAN"] ?? res.rows;
+  } finally {
+    await client.end();
+  }
+}
 
 export const analyzeQuery = inngest.createFunction(
   { id: "analyze-query", retries: 2 },
@@ -16,14 +36,7 @@ export const analyzeQuery = inngest.createFunction(
         .eq("id", analysisId);
     });
 
-    const explainOutput = await step.run("simulate-explain", async () => {
-      return {
-        plan: "Seq Scan on target table",
-        estimated_cost: 1000,
-        note: "Stubbed EXPLAIN — wire up a real Postgres connection to run EXPLAIN (FORMAT JSON) against user DB.",
-        sql: rawSql,
-      };
-    });
+    const explainOutput = await step.run("run-explain", () => runExplain(rawSql));
 
     const ai = await step.run("ai-explain", async () => {
       if (!process.env.OPENAI_API_KEY) {
