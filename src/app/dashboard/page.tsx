@@ -31,11 +31,16 @@ export default async function DashboardPage({
     <main className="mx-auto max-w-4xl px-6 py-10">
       <header className="flex items-center justify-between">
         <h1 className="text-3xl font-semibold">Dashboard</h1>
+        <div className="flex items-center gap-4">
+          <Link href="/history" className="text-sm text-slate-300 hover:text-white">
+            History
+          </Link>
         <form action="/auth/signout" method="post">
           <button className="rounded border border-slate-700 px-3 py-1.5 text-sm hover:bg-slate-800">
             Sign out
           </button>
         </form>
+        </div>
       </header>
 
       <section className="mt-8">
