@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { inngest } from "@/lib/inngest/client";
+import { validateQuery } from "@/lib/sql/sandbox";
 
 const AnalyzeSchema = z.object({
   sql: z.string().trim().min(1, "sql required").max(50_000),
@@ -17,7 +18,11 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "invalid" }, { status: 400 });
   }
-  const { sql } = parsed.data;
+  const gate = validateQuery(parsed.data.sql);
+  if (!gate.ok) {
+    return NextResponse.json({ error: gate.reason }, { status: 400 });
+  }
+  const sql = gate.sql;
 
   const { data, error } = await supabase
     .from("query_analyses")

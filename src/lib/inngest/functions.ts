@@ -2,9 +2,13 @@ import { inngest } from "./client";
 import { createServiceClient } from "@/lib/supabase/server";
 import { analyzeWithClaude } from "@/lib/claude/analyze";
 import { buildExecutionTree } from "@/lib/sql/execution-tree";
+import { validateQuery } from "@/lib/sql/sandbox";
 import { Client } from "pg";
 
 async function runExplain(rawSql: string): Promise<unknown> {
+  const gate = validateQuery(rawSql);
+  if (!gate.ok) throw new Error(`sandbox rejected query: ${gate.reason}`);
+  const safeSql = gate.sql;
   const url = process.env.TARGET_DATABASE_URL;
   if (!url) {
     return {
@@ -16,7 +20,7 @@ async function runExplain(rawSql: string): Promise<unknown> {
   const client = new Client({ connectionString: url });
   await client.connect();
   try {
-    const res = await client.query(`EXPLAIN (FORMAT JSON) ${rawSql}`);
+    const res = await client.query(`EXPLAIN (FORMAT JSON) ${safeSql}`);
     return res.rows[0]?.["QUERY PLAN"] ?? res.rows;
   } finally {
     await client.end();
