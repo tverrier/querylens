@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import QueryForm from "./query-form";
+import { deleteAnalysis } from "./actions";
 
 export default async function DashboardPage() {
   const supabase = createClient();
@@ -44,9 +45,14 @@ export default async function DashboardPage() {
                   {new Date(a.created_at).toLocaleString()} · {a.status}
                 </span>
               </div>
-              <Link href={`/analysis/${a.id}`} className="text-brand-500 hover:underline">
-                View
-              </Link>
+              <div className="flex items-center gap-4">
+                <Link href={`/analysis/${a.id}`} className="text-brand-500 hover:underline">
+                  View
+                </Link>
+                <form action={deleteAnalysis.bind(null, a.id)}>
+                  <button className="text-sm text-slate-500 hover:text-red-400">Delete</button>
+                </form>
+              </div>
             </li>
           ))}
         </ul>

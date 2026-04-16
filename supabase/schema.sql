@@ -62,3 +62,6 @@ create policy "analyses owner read" on public.query_analyses
 
 create policy "analyses owner insert" on public.query_analyses
   for insert with check (auth.uid() = user_id);
+
+create policy "analyses owner delete" on public.query_analyses
+  for delete using (auth.uid() = user_id);
