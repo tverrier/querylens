@@ -4,16 +4,28 @@ import Link from "next/link";
 import QueryForm from "./query-form";
 import { deleteAnalysis } from "./actions";
 
-export default async function DashboardPage() {
+const PAGE_SIZE = 20;
+
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: { page?: string };
+}) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: analyses } = await supabase
+  const page = Math.max(1, Number(searchParams.page ?? "1") || 1);
+  const from = (page - 1) * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
+
+  const { data: analyses, count } = await supabase
     .from("query_analyses")
-    .select("id, raw_sql, status, created_at")
+    .select("id, raw_sql, status, created_at", { count: "exact" })
     .order("created_at", { ascending: false })
-    .limit(20);
+    .range(from, to);
+
+  const totalPages = Math.max(1, Math.ceil((count ?? 0) / PAGE_SIZE));
 
   return (
     <main className="mx-auto max-w-4xl px-6 py-10">
@@ -56,6 +68,25 @@ export default async function DashboardPage() {
             </li>
           ))}
         </ul>
+        {totalPages > 1 && (
+          <nav className="mt-4 flex items-center justify-between text-sm text-slate-400">
+            <span>
+              Page {page} of {totalPages}
+            </span>
+            <div className="flex gap-3">
+              {page > 1 && (
+                <Link href={`/dashboard?page=${page - 1}`} className="hover:text-slate-200">
+                  ← Prev
+                </Link>
+              )}
+              {page < totalPages && (
+                <Link href={`/dashboard?page=${page + 1}`} className="hover:text-slate-200">
+                  Next →
+                </Link>
+              )}
+            </div>
+          </nav>
+        )}
       </section>
     </main>
   );
