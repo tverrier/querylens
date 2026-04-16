@@ -1,16 +1,23 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { inngest } from "@/lib/inngest/client";
+
+const AnalyzeSchema = z.object({
+  sql: z.string().trim().min(1, "sql required").max(50_000),
+});
 
 export async function POST(req: Request) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
-  const { sql } = await req.json();
-  if (typeof sql !== "string" || !sql.trim()) {
-    return NextResponse.json({ error: "sql required" }, { status: 400 });
+  const body = await req.json().catch(() => null);
+  const parsed = AnalyzeSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "invalid" }, { status: 400 });
   }
+  const { sql } = parsed.data;
 
   const { data, error } = await supabase
     .from("query_analyses")

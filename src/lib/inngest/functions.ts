@@ -1,6 +1,6 @@
 import { inngest } from "./client";
 import { createServiceClient } from "@/lib/supabase/server";
-import OpenAI from "openai";
+import { analyzeWithClaude } from "@/lib/claude/analyze";
 import { Client } from "pg";
 
 async function runExplain(rawSql: string): Promise<unknown> {
@@ -50,34 +50,7 @@ export const analyzeQuery = inngest.createFunction(
 
     const explainOutput = await step.run("run-explain", () => runExplain(rawSql));
 
-    const ai = await step.run("ai-explain", async () => {
-      if (!process.env.OPENAI_API_KEY) {
-        return {
-          explanation: "OpenAI key not configured. Add OPENAI_API_KEY to enable AI explanations.",
-          optimized: rawSql,
-        };
-      }
-      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content: "You are a SQL performance expert. Given a query and its EXPLAIN output, return JSON with keys: explanation (plain English of what the query does and bottlenecks) and optimized (rewritten SQL).",
-          },
-          {
-            role: "user",
-            content: `SQL:\n${rawSql}\n\nEXPLAIN:\n${JSON.stringify(explainOutput)}`,
-          },
-        ],
-        response_format: { type: "json_object" },
-      });
-      const parsed = JSON.parse(completion.choices[0].message.content || "{}");
-      return {
-        explanation: parsed.explanation ?? "",
-        optimized: parsed.optimized ?? rawSql,
-      };
-    });
+    const ai = await step.run("ai-explain", () => analyzeWithClaude(rawSql, explainOutput));
 
     await step.run("persist-results", async () => {
       await supabase
