@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import ExecutionTree from "@/components/visualization/ExecutionTree";
+import type { ExecutionNode } from "@/lib/sql/execution-tree";
 
 type Status = "pending" | "processing" | "complete" | "error" | "degraded";
 
@@ -9,7 +11,7 @@ type Analysis = {
   id: string;
   raw_sql: string;
   explain_output: unknown;
-  execution_tree: unknown;
+  execution_tree: ExecutionNode | null;
   ai_explanation: string | null;
   ai_bottlenecks: string[] | null;
   optimized_query: string | null;
@@ -65,6 +67,14 @@ export default function AnalysisView({ initial }: { initial: Analysis }) {
       {data.status === "error" && data.error_message && (
         <Section title="Error">
           <pre className="rounded bg-red-950/50 p-4 text-sm text-red-300">{data.error_message}</pre>
+        </Section>
+      )}
+
+      {data.execution_tree && (
+        <Section title="Execution plan">
+          <div className="rounded bg-slate-900 p-4">
+            <ExecutionTree tree={data.execution_tree} />
+          </div>
         </Section>
       )}
 
