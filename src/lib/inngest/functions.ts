@@ -17,10 +17,13 @@ async function runExplain(rawSql: string): Promise<unknown> {
       sql: rawSql,
     };
   }
-  const client = new Client({ connectionString: url });
+  const client = new Client({ connectionString: url, statement_timeout: 5000 });
   await client.connect();
   try {
-    const res = await client.query(`EXPLAIN (FORMAT JSON) ${safeSql}`);
+    await client.query("BEGIN TRANSACTION READ ONLY");
+    await client.query("SET search_path TO sandbox, public");
+    const res = await client.query(`EXPLAIN (FORMAT JSON, ANALYZE false) ${safeSql}`);
+    await client.query("ROLLBACK");
     return res.rows[0]?.["QUERY PLAN"] ?? res.rows;
   } finally {
     await client.end();
@@ -41,7 +44,7 @@ export const analyzeQuery = inngest.createFunction(
         .eq("id", analysisId);
     },
   },
-  { event: "query/analyze.requested" },
+  { event: "analyze/query.submitted" },
   async ({ event, step }) => {
     const { analysisId, rawSql } = event.data;
     const supabase = createServiceClient();
@@ -62,15 +65,15 @@ export const analyzeQuery = inngest.createFunction(
       await supabase
         .from("query_analyses")
         .update({
-          status: "complete",
+          status: ai.degraded ? "degraded" : "complete",
           explain_output: explainOutput,
           execution_tree: executionTree,
-          ai_explanation: ai.explanation,
-          ai_bottlenecks: ai.bottlenecks,
-          optimized_query: ai.optimized,
-          estimated_improvement: ai.estimated_improvement,
-          index_suggestions: ai.index_suggestions,
-          planner_insights: ai.planner_insights,
+          ai_explanation: ai.response.summary,
+          ai_bottlenecks: ai.response.bottlenecks,
+          optimized_query: ai.response.optimizedQuery,
+          estimated_improvement: ai.response.estimatedImprovement,
+          index_suggestions: ai.response.indexSuggestions,
+          planner_insights: ai.response.plannerInsights,
           processing_time_ms: Date.now() - startedAt,
         })
         .eq("id", analysisId);

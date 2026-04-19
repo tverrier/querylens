@@ -1,15 +1,18 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import ExecutionTree from "@/components/visualization/ExecutionTree";
-import type { ExecutionNode } from "@/lib/sql/execution-tree";
+import { BottleneckCard } from "@/components/query/BottleneckCard";
+import { OptimizedQueryPanel } from "@/components/query/OptimizedQueryPanel";
+import type { TreeNode, Bottleneck } from "@/types";
 
 export const revalidate = 60;
 
 type SharedAnalysis = {
   raw_sql: string;
-  execution_tree: ExecutionNode | null;
+  execution_tree: TreeNode | null;
   ai_explanation: string | null;
-  ai_bottlenecks: string[] | null;
+  ai_bottlenecks: Bottleneck[] | null;
   optimized_query: string | null;
   estimated_improvement: string | null;
   index_suggestions: string[] | null;
@@ -18,7 +21,11 @@ type SharedAnalysis = {
   created_at: string;
 };
 
-export default async function SharePage({ params }: { params: { token: string } }) {
+export default async function SharePage({
+  params,
+}: {
+  params: { token: string };
+}) {
   const supabase = createClient();
   const { data } = await supabase
     .from("query_analyses")
@@ -31,78 +38,135 @@ export default async function SharePage({ params }: { params: { token: string } 
   if (!data) notFound();
 
   return (
-    <main className="mx-auto max-w-4xl px-6 py-10">
-      <div className="text-xs uppercase tracking-wide text-slate-500">Shared analysis</div>
-      <h1 className="mt-1 text-3xl font-semibold">Query analysis</h1>
-      <p className="mt-1 text-xs text-slate-500">
-        {new Date(data.created_at).toLocaleString()}
-        {data.processing_time_ms != null && ` · ${data.processing_time_ms} ms`}
-      </p>
+    <div className="min-h-screen">
+      <nav className="border-b border-border bg-secondary">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3">
+          <Link
+            href="/"
+            className="text-lg font-semibold tracking-tight text-text-primary"
+          >
+            QueryLens
+          </Link>
+          <span className="rounded-full bg-accent-subtle px-3 py-1 text-xs font-medium text-accent">
+            Shared analysis
+          </span>
+        </div>
+      </nav>
 
-      <Section title="Raw SQL">
-        <pre className="overflow-x-auto rounded bg-slate-900 p-4 text-sm">{data.raw_sql}</pre>
-      </Section>
+      <main className="mx-auto max-w-7xl px-6 py-8 page-enter">
+        <p className="text-xs text-text-muted">
+          {new Date(data.created_at).toLocaleString()}
+          {data.processing_time_ms != null &&
+            ` · ${data.processing_time_ms}ms`}
+        </p>
 
-      {data.execution_tree && (
-        <Section title="Execution plan">
-          <div className="rounded bg-slate-900 p-4">
-            <ExecutionTree tree={data.execution_tree} />
+        <details className="mt-4">
+          <summary className="cursor-pointer text-sm text-text-secondary hover:text-text-primary transition-colors">
+            Raw SQL
+          </summary>
+          <pre className="mt-2 overflow-x-auto rounded-lg border border-border bg-secondary p-4 font-mono text-sm text-text-secondary">
+            {data.raw_sql}
+          </pre>
+        </details>
+
+        {(data.execution_tree || data.ai_explanation) && (
+          <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-[3fr_2fr] lg:grid-cols-2">
+            <div>
+              {data.execution_tree && (
+                <div className="rounded-xl border border-border bg-secondary">
+                  <div className="border-b border-border px-4 py-3">
+                    <h2 className="text-sm font-medium">Execution plan</h2>
+                  </div>
+                  <div className="h-[400px] lg:h-[500px]">
+                    <ExecutionTree tree={data.execution_tree} />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-6">
+              {data.ai_explanation && (
+                <div className="rounded-xl border border-border bg-secondary p-5">
+                  <h2 className="text-sm font-medium text-text-secondary">
+                    Summary
+                  </h2>
+                  <p className="mt-2 text-sm leading-relaxed text-text-primary">
+                    {data.ai_explanation}
+                  </p>
+                </div>
+              )}
+
+              {data.ai_bottlenecks && data.ai_bottlenecks.length > 0 && (
+                <div>
+                  <h2 className="mb-3 text-sm font-medium text-text-secondary">
+                    Bottlenecks
+                  </h2>
+                  <div className="space-y-3">
+                    {data.ai_bottlenecks.map((b, i) => (
+                      <BottleneckCard
+                        key={i}
+                        bottleneck={b}
+                        isSelected={false}
+                        onClick={() => {}}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {data.optimized_query && (
+                <div>
+                  <h2 className="mb-3 text-sm font-medium text-text-secondary">
+                    Optimized query
+                  </h2>
+                  <OptimizedQueryPanel
+                    originalSql={data.raw_sql}
+                    optimizedQuery={data.optimized_query}
+                    estimatedImprovement={data.estimated_improvement}
+                    indexSuggestions={data.index_suggestions}
+                  />
+                </div>
+              )}
+
+              {data.planner_insights && (
+                <div className="rounded-xl border border-border bg-secondary p-5">
+                  <h2 className="text-sm font-medium text-text-secondary">
+                    Planner insights
+                  </h2>
+                  <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-text-primary">
+                    {data.planner_insights}
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
-        </Section>
-      )}
+        )}
 
-      {data.ai_explanation && (
-        <Section title="Explanation">
-          <p className="whitespace-pre-wrap rounded bg-slate-900 p-4 text-sm leading-relaxed">
-            {data.ai_explanation}
+        {/* Sign-up CTA */}
+        <div className="mt-12 rounded-xl border border-accent-subtle bg-accent-subtle p-8 text-center">
+          <h2 className="text-xl font-semibold text-text-primary">
+            Analyze your own SQL queries
+          </h2>
+          <p className="mt-2 text-sm text-text-secondary">
+            Get visual execution plans, AI-powered bottleneck analysis, and
+            optimized rewrites — free.
           </p>
-        </Section>
-      )}
-
-      {data.ai_bottlenecks && data.ai_bottlenecks.length > 0 && (
-        <Section title="Bottlenecks">
-          <ul className="list-disc space-y-1 rounded bg-slate-900 p-4 pl-8 text-sm">
-            {data.ai_bottlenecks.map((b, i) => (
-              <li key={i}>{b}</li>
-            ))}
-          </ul>
-        </Section>
-      )}
-
-      {data.optimized_query && (
-        <Section
-          title={`Optimized query${data.estimated_improvement ? ` — ${data.estimated_improvement}` : ""}`}
-        >
-          <pre className="overflow-x-auto rounded bg-slate-900 p-4 text-sm">
-            {data.optimized_query}
-          </pre>
-        </Section>
-      )}
-
-      {data.index_suggestions && data.index_suggestions.length > 0 && (
-        <Section title="Suggested indexes">
-          <pre className="overflow-x-auto rounded bg-slate-900 p-4 text-sm">
-            {data.index_suggestions.join("\n")}
-          </pre>
-        </Section>
-      )}
-
-      {data.planner_insights && (
-        <Section title="Planner insights">
-          <p className="whitespace-pre-wrap rounded bg-slate-900 p-4 text-sm leading-relaxed">
-            {data.planner_insights}
-          </p>
-        </Section>
-      )}
-    </main>
-  );
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="mt-8">
-      <h2 className="mb-2 text-lg font-medium">{title}</h2>
-      {children}
-    </section>
+          <div className="mt-6 flex items-center justify-center gap-4">
+            <Link
+              href="/login"
+              className="rounded-lg bg-accent px-6 py-3 text-sm font-medium text-white hover:bg-accent-hover transition-colors"
+            >
+              Sign up free
+            </Link>
+            <Link
+              href="/"
+              className="rounded-lg border border-border px-6 py-3 text-sm font-medium text-text-secondary hover:bg-tertiary hover:text-text-primary transition-colors"
+            >
+              Learn more
+            </Link>
+          </div>
+        </div>
+      </main>
+    </div>
   );
 }

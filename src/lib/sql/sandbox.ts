@@ -47,7 +47,7 @@ function stripCommentsAndStrings(sql: string): string {
 export function validateQuery(rawSql: string): SandboxResult {
   const trimmed = rawSql.trim().replace(/;+\s*$/, "");
   if (!trimmed) return { ok: false, reason: "Query is empty." };
-  if (trimmed.length > 50_000) return { ok: false, reason: "Query exceeds 50k characters." };
+  if (trimmed.length > 10_000) return { ok: false, reason: "Query exceeds 10k character limit." };
 
   const scrubbed = stripCommentsAndStrings(trimmed).toLowerCase();
 
