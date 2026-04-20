@@ -60,7 +60,7 @@ interface TreeNode {
 ## Claude API Shape
 ```typescript
 {
-  model: "claude-sonnet-4-20250514",
+  model: "claude-sonnet-4-6-20250416",
   max_tokens: 2000,
   system: SYSTEM_PROMPT,   // from PROMPTS.md
   messages: [{role:"user", content: buildAnalysisPrompt(tree,sql,explainJson)}]

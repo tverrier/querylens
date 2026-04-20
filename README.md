@@ -1,40 +1,62 @@
 # QueryLens
 
-Next.js 14 app that analyzes SQL queries: runs EXPLAIN, gets an AI walkthrough, and proposes an optimized rewrite. Built with Supabase auth + Postgres, Inngest for background jobs, and Tailwind.
+AI-powered PostgreSQL query analyzer. Paste a SQL query, get a visual execution plan, AI bottleneck analysis, and an optimized rewrite — all in seconds.
 
 ## Stack
-- Next.js 14 (App Router) + TypeScript
-- Supabase: Google & GitHub OAuth, Postgres, RLS
-- Inngest: background analysis jobs
-- Tailwind CSS
-- OpenAI (optional) for explanations
+
+- **Framework:** Next.js 14 (App Router), TypeScript (strict)
+- **Auth:** Supabase Auth (Google + GitHub OAuth)
+- **Database:** Supabase PostgreSQL with RLS
+- **Jobs:** Inngest (async analysis pipeline)
+- **AI:** Claude API (Sonnet 4.6)
+- **Visualization:** D3.js v7
+- **Styling:** Tailwind CSS
+
+## How it works
+
+```
+User submits SQL → POST /api/analyze
+  → Insert query_analyses row (status: pending)
+  → Inngest event dispatched
+  → Worker: EXPLAIN → parse tree → Claude AI analysis
+  → Results saved, client polls until complete
+  → D3 execution tree + AI bottleneck cards rendered
+```
 
 ## Setup
 
-1. `cp .env.example .env.local` and fill in values.
-2. Create a Supabase project. In the dashboard:
-   - Auth → Providers: enable Google + GitHub, set redirect URL to `${NEXT_PUBLIC_SITE_URL}/auth/callback`.
-   - SQL Editor: run `supabase/schema.sql`.
-3. Inngest: create an app, grab event + signing keys.
-4. Install & run:
+1. Clone and install:
    ```bash
+   git clone https://github.com/tverrier/querylens.git
+   cd querylens
    npm install
-   npm run dev
-   # in another terminal
-   npm run inngest
    ```
 
-## Flow
+2. Create a [Supabase](https://supabase.com) project and apply the three migrations from `docs/DATABASE.md` via the SQL Editor.
 
-1. User signs in at `/login` (OAuth → `/auth/callback` → session cookie).
-2. Middleware (`src/middleware.ts`) protects `/dashboard` and `/analysis/*`.
-3. Dashboard posts SQL to `/api/analyze`, which inserts a `query_analyses` row and sends an `query/analyze.requested` event to Inngest.
-4. The Inngest function `analyzeQuery` runs EXPLAIN (stubbed), asks OpenAI for an explanation + optimized query, and updates the row.
-5. `/analysis/[id]` polls `/api/analysis/[id]` every 2s until status is `completed` or `failed`.
+3. Enable Google and GitHub OAuth providers in Supabase Auth settings. Set the redirect URL to `https://<project-ref>.supabase.co/auth/v1/callback`.
+
+4. Copy env vars:
+   ```bash
+   cp .env.example .env.local
+   ```
+   Fill in: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `ANTHROPIC_API_KEY`, `TARGET_DATABASE_URL`.
+
+5. Run:
+   ```bash
+   npm run dev          # Next.js dev server
+   npm run inngest      # Inngest dev server (separate terminal)
+   ```
+
+6. Open `http://localhost:3000`, sign in, and analyze a query.
 
 ## Deploy to Vercel
 
-- Push to GitHub, import in Vercel.
-- Set env vars (see `vercel.json`).
-- Add `/api/inngest` as your Inngest serve endpoint in the Inngest dashboard.
-- Update `NEXT_PUBLIC_SITE_URL` and Supabase OAuth redirect URL to the Vercel URL.
+1. Push to GitHub and import in Vercel.
+2. Set all env vars from `.env.example`.
+3. Register `/api/inngest` as your Inngest serve endpoint.
+4. Update `NEXT_PUBLIC_SITE_URL` and OAuth redirect URLs to the Vercel URL.
+
+## License
+
+MIT

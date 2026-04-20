@@ -104,7 +104,7 @@ function extractJson(text: string): string {
 async function callClaude(prompt: string): Promise<AnalysisResponse> {
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
   const message = await client.messages.create({
-    model: "claude-sonnet-4-20250514",
+    model: "claude-sonnet-4-6-20250416",
     max_tokens: 4096,
     system: SYSTEM_PROMPT,
     messages: [{ role: "user", content: prompt }],

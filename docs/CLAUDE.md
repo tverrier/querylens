@@ -11,7 +11,7 @@ Deploy target: Vercel + Supabase.
 | Auth | Supabase Auth — Google + GitHub OAuth only |
 | DB | Supabase PostgreSQL + RLS on every table |
 | Jobs | Inngest (async analysis pipeline) |
-| AI | Claude API `claude-sonnet-4-20250514`, JSON only |
+| AI | Claude API `claude-sonnet-4-6-20250416`, JSON only |
 | Viz | D3.js v7 |
 | Deploy | Vercel, auto-deploy from main |
 

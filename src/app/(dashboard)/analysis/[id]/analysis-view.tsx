@@ -104,7 +104,7 @@ export default function AnalysisView({ initial }: { initial: Analysis }) {
   };
 
   return (
-    <main className="page-enter mx-auto max-w-7xl px-6 py-8">
+    <main className="page-enter mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
       <nav className="flex items-center justify-between">
         <Link
           href="/dashboard"
@@ -165,7 +165,7 @@ export default function AnalysisView({ initial }: { initial: Analysis }) {
                 <div className="border-b border-border px-4 py-3">
                   <h2 className="text-sm font-medium">Execution plan</h2>
                 </div>
-                <div className="h-[500px]">
+                <div className="h-[350px] sm:h-[500px]">
                   <ExecutionTree
                     tree={data.execution_tree}
                     bottlenecks={data.ai_bottlenecks ?? undefined}
